@@ -247,7 +247,7 @@ static void SMIX_LDG(const uint32_t shared[4][256], uint32_t &x0,uint32_t &x1,ui
 
 /***************************************************/
 // Die Hash-Funktion
-__global__ __launch_bounds__(256,3)
+__global__ __launch_bounds__(256,2)
 void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
 {
 	__shared__ uint32_t shared[4][256];
@@ -295,7 +295,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
 		FUGUE512_3(Hash[0x9], Hash[0xA], Hash[0xB]);
 		FUGUE512_3(Hash[0xC], Hash[0xD], Hash[0xE]);
 		FUGUE512_3(Hash[0xF], 0U, 512U);
-
+//#pragma unroll 16
 		for (uint32_t i = 0; i < 32; i+=2){
 			mROR3;
 			CMIX36(S[ 0], S[ 1], S[ 2], S[ 4], S[ 5], S[ 6], S[18], S[19], S[20]);
@@ -304,7 +304,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
 			CMIX36(S[ 0], S[ 1], S[ 2], S[ 4], S[ 5], S[ 6], S[18], S[19], S[20]);
 			SMIX_LDG(shared, S[ 0], S[ 1], S[ 2], S[ 3]);
 		}
-		#pragma unroll
+//		#pragma unroll 13
 		for (uint32_t i = 0; i < 13; i ++) {
 			S[ 4] ^= S[ 0];	S[ 9] ^= S[ 0];	S[18] ^= S[ 0];	S[27] ^= S[ 0];
 			mROR9;

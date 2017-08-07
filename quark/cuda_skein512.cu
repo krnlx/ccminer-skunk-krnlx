@@ -267,7 +267,7 @@ static __constant__ uint2 c_buffer[120]; // padded message (80 bytes + 72 bytes 
 
 __global__
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(TPB52, 3)
+__launch_bounds__(TPB52, 5)
 #else
 __launch_bounds__(TPB50, 5)
 #endif

@@ -177,6 +177,7 @@ __device__ __forceinline__
 static void GOST_E12(const uint2 shared[8][256],uint2 *const __restrict__ K, uint2 *const __restrict__ state){
 
 	uint2 t[ 8];
+//#pragma unroll 12
 	for(int i=0; i<12; i++){
 		GOST_FS(shared,state, t);
 		
@@ -203,9 +204,9 @@ static void GOST_E12(const uint2 shared[8][256],uint2 *const __restrict__ K, uin
 #define TPB 256
 __global__
 #if __CUDA_ARCH__ > 500
-__launch_bounds__(TPB, 3)
+__launch_bounds__(TPB, 2)
 #else
-__launch_bounds__(TPB, 3)
+__launch_bounds__(TPB, 2)
 #endif
 void streebog_gpu_hash_64(uint64_t *g_hash){
 
@@ -226,7 +227,6 @@ void streebog_gpu_hash_64(uint64_t *g_hash){
 	shared[5][threadIdx.x] = __ldg(&T52[threadIdx.x]);
 	shared[6][threadIdx.x] = __ldg(&T62[threadIdx.x]);
 	shared[7][threadIdx.x] = __ldg(&T72[threadIdx.x]);
-
 //	if (thread < threads)
 //	{
 	uint64_t* inout = &g_hash[thread<<3];
@@ -235,7 +235,6 @@ void streebog_gpu_hash_64(uint64_t *g_hash){
 	*(uint2x4*)&hash[4] = __ldg4((uint2x4*)&inout[4]);
 
 	__threadfence_block();
-
 	K0[0] = vectorize(0x74a5d4ce2efc83b3);
 
 	#pragma unroll 8
@@ -278,7 +277,6 @@ void streebog_gpu_hash_64(uint64_t *g_hash){
 	buf[7].y ^= 0x01000000;
 
 	GOST_FS(shared, buf,K0);
-
 	buf[7].y ^= 0x00020000;
 
 	#pragma unroll 8
@@ -323,7 +321,7 @@ void streebog_set_target(const uint32_t* ptarget){
 }
 
 __global__
-__launch_bounds__(TPB, 3)
+__launch_bounds__(TPB, 2)
 void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -335,6 +333,7 @@ void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 //	((uint4*)&shared[2])[threadIdx.x] = __ldg(&((uint4*)&T22)[threadIdx.x]);
 //	((uint4*)&shared[3])[threadIdx.x] = __ldg(&((uint4*)&T32)[threadIdx.x]);
 //	((uint4*)&shared[4])[threadIdx.x] = __ldg(&((uint4*)&T42)[threadIdx.x]);
+//if (threadIdx.x < 256){
 	shared[0][threadIdx.x] = __ldg(&T02[threadIdx.x]);
 	shared[1][threadIdx.x] = __ldg(&T12[threadIdx.x]);
 	shared[2][threadIdx.x] = __ldg(&T22[threadIdx.x]);
@@ -343,7 +342,8 @@ void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 	shared[5][threadIdx.x] = __ldg(&T52[threadIdx.x]);
 	shared[6][threadIdx.x] = __ldg(&T62[threadIdx.x]);
 	shared[7][threadIdx.x] = __ldg(&T72[threadIdx.x]);
-
+//}
+//__syncthreads();
 //	if (thread < threads)
 //	{
 	uint64_t* inout = &g_hash[thread<<3];
@@ -359,7 +359,7 @@ void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 	for(uint32_t i=0;i<8;i++){
 		buf[ i] = hash[ i] ^ K0[ 0];
 	}
-
+//#pragma unroll 12
 	for(int i=0; i<12; i++){
 		GOST_FS(shared, buf, temp);
 		#pragma unroll 8
@@ -418,7 +418,7 @@ void streebog_gpu_hash_64_final(uint64_t *g_hash, uint32_t* resNonce)
 	for(uint32_t j=0;j<8;j++)
 		t[ j] = K0[ j] ^ hash[ j];
 
-//	#pragma unroll
+//	#pragma unroll 
 	for(uint32_t i=0; i<10; i++){
 		GOST_FS(shared, t, temp);
 

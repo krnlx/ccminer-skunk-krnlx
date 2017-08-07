@@ -15,6 +15,8 @@
 #if defined(SHUFFLE)
 
 #define TPB 1024
+static __forceinline__ __device__ uint4 operator^ (uint4 a, uint4 b) { return make_uint4(a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w); }
+static __forceinline__ __device__  void operator^=(uint4 &a,uint4 b) { a = a ^ b; }
 
 __device__ __forceinline__
 void rrounds(uint32_t *x){
@@ -77,13 +79,19 @@ void rrounds(uint32_t *x){
 	}
 }
 __global__ __launch_bounds__(TPB, 1)
-void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash){
+//void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash){
+void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector){
+
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x)>>1;
 
 	const uint32_t even = (threadIdx.x & 1);
 
 	if (thread < threads){
-		uint32_t *Hash = (uint32_t*)&g_hash[8 * thread + 2*even];
+//		uint32_t *Hash = (uint32_t*)&g_hash[8 * thread + 2*even];
+uint32_t nounce = (g_nonceVector != NULL) ? g_nonceVector[thread] : (startNounce + thread);
+
+                int hashPosition = nounce - startNounce;
+                uint32_t *Hash = (uint32_t*)&g_hash[8 * hashPosition];
 
 		uint32_t x[16];
 
@@ -124,23 +132,27 @@ void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash){
 	}
 }
 __host__
-void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash){
+//void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash){
+void x11_cubehash512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_nonceVector, uint32_t *d_hash, int order){
+
 
     // berechne wie viele Thread Blocks wir brauchen
     dim3 grid((2*threads + TPB-1)/TPB);
     dim3 block(TPB);
 
-    x11_cubehash512_gpu_hash_64<<<grid, block>>>(threads, (uint64_t*)d_hash);
+//    x11_cubehash512_gpu_hash_64<<<grid, block>>>(threads, (uint64_t*)d_hash);
+        x11_cubehash512_gpu_hash_64<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash, d_nonceVector);
+
 
 }
 
 #else
 
-#define TPB 768
+#define TPB 512
 
 __device__ __forceinline__
 static void rrounds(uint32_t *x){
-	#pragma unroll 2
+	#pragma unroll 2 
 	for (int r = 0; r < 16; r++) {
 		/* "add x_0jklm into x_1jklmn modulo 2^32 rotate x_0jklm upwards by 7 bits" */
 		x[16] = x[16] + x[ 0]; x[ 0] = ROTL32(x[ 0], 7);x[17] = x[17] + x[ 1];x[ 1] = ROTL32(x[ 1], 7);
@@ -179,7 +191,7 @@ static void rrounds(uint32_t *x){
 
 /***************************************************/
 // GPU Hash Function
-__global__ __launch_bounds__(TPB)
+__global__ __launch_bounds__(TPB,2)
 //void x11_cubehash512_gpu_hash_64(uint32_t threads, uint64_t *g_hash){
 void x11_cubehash512_gpu_hash_64(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, uint32_t *g_nonceVector)
 {
