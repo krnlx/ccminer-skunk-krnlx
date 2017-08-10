@@ -253,7 +253,7 @@ void x13_fugue512_gpu_hash_64(uint32_t threads, uint64_t *g_hash)
 	__shared__ uint32_t shared[4][256];
 
 //	if(threadIdx.x<256){
-		const uint32_t tmp = mixtab0[threadIdx.x];
+		const uint32_t tmp = __ldg(&mixtab0[threadIdx.x]);
 		shared[0][threadIdx.x] = tmp;
 		shared[1][threadIdx.x] = ROR8X(tmp);
 		shared[2][threadIdx.x] = ROL16X(tmp);

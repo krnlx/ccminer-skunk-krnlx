@@ -116,7 +116,7 @@ extern "C" int scanhash_skunk(int thr_id, struct work* work, uint32_t max_nonce,
 	do {
 		int order = 0;
 		skein512_cpu_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id], order++);
-		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
+//		x11_cubehash512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		x13_fugue512_cpu_hash_64(thr_id, throughput, pdata[19], NULL, d_hash[thr_id], order++);
 		streebog_cpu_hash_64_final(thr_id, throughput, d_hash[thr_id], d_resNonce[thr_id]);
 
